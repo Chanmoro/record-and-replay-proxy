@@ -1,14 +1,20 @@
-import os
-
 from mitmproxy import http
 
-from response_recorder import ResponseRecorder
+from response_recorder import HttpRequest, ResponseRecorder
 
 
 def request(flow: http.HTTPFlow) -> None:
     """ 保存済みのファイルからレスポンスを読み込む """
     try:
-        flow.response = ResponseRecorder.load_response(flow.request, os.environ['RESPONSE_DATA_PATH'])
+        stub_response = ResponseRecorder.load_response(
+            HttpRequest(
+                method=flow.request.method,
+                url=flow.request.url
+            ))
+        flow.response = http.HTTPResponse.make(
+            stub_response.status,
+            stub_response.body,
+            stub_response.headers)
     except Exception as e:
         flow.response = http.HTTPResponse.make(
             502,
