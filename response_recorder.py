@@ -1,16 +1,20 @@
 import json
 import os
 import urllib.parse
-from dataclasses import dataclass
-from typing import Dict, Optional
-
-from mitmproxy import http
-from mitmproxy.net.http import Headers
+from dataclasses import asdict, dataclass
+from typing import Tuple, Optional, Iterable
 
 
 class ResponseDataNotFound(Exception):
     """ レスポンスのファイルが存在しない場合の例外 """
     pass
+
+
+@dataclass(frozen=True)
+class RequestMetaData:
+    url: str
+    method: str
+    status: int
 
 
 @dataclass(frozen=True)
@@ -21,100 +25,14 @@ class HttpRequest:
 
 @dataclass(frozen=True)
 class HttpResponse:
-    status_code: int
-    headers: Dict[str, str]
-    body: str
+    status: int
+    headers: Iterable[Tuple[bytes, bytes]]
+    body: Optional[bytes]
 
 
-class ResponseRecorder:
-    CALLED_REQUESTS = []
-
+class FileReaderWriter:
     @classmethod
-    def load_response(cls, request: http.HTTPRequest, base_path: str) -> http.HTTPResponse:
-        """
-        保存されたレスポンスをロードする
-        :param request:
-        :return:
-        """
-        load_path = cls._get_data_path(request, base_path)
-        print('==> Response data is loaded from {}'.format(load_path))
-
-        # スタブがロードしようとしたファイルのパスを記録する
-        cls.CALLED_REQUESTS.append(load_path)
-
-        # 該当するスタブのファイルがない場合は例外を発生させる
-        if not os.path.exists(load_path):
-            raise ResponseDataNotFound('There is no such stub data dir. {}'.format(load_path))
-
-        # ファイルをロードして各オブジェクトを復元する
-        metadata = json.loads(cls._load_from_file('{}/{}'.format(load_path, 'metadata')).decode('UTF-8'))
-        headers = cls.bytes_to_headers(cls._load_from_file('{}/{}'.format(load_path, 'response_headers')))
-        body = cls._load_from_file('{}/{}'.format(load_path, 'response_body'))
-
-        # Response オブジェクトを作成する
-        return http.HTTPResponse.make(
-            metadata['status'],
-            body,
-            headers)
-
-    @classmethod
-    def headers_to_bytes(cls, headers: Headers) -> bytes:
-        return bytes(headers)
-
-    @classmethod
-    def bytes_to_headers(cls, raw_headers: bytes) -> list:
-        return [(l.split(b": ")[0], l.split(b": ")[1]) for l in raw_headers.split(b"\n") if l]
-
-    @classmethod
-    def save_response(cls, request: http.HTTPRequest, response: http.HTTPResponse, base_path: str):
-        """
-        HTTPレスポンスをファイルに保存する
-        :param request:
-        :param response:
-        :return:
-        """
-        export_path = cls._get_data_path(request, base_path)
-        print('==> Response data is saved into {}'.format(export_path))
-
-        # 出力先のディレクトリがなければ作成する
-        if not os.path.exists(export_path):
-            os.makedirs(export_path)
-
-        # メタデータを保存
-        metadata = {
-            'url': request.url,
-            'method': request.method,
-            'status': response.status_code,
-        }
-        cls._save_to_file('{}/{}'.format(export_path, 'metadata'),
-                          json.dumps(metadata, indent=4).encode('UTF-8'))
-
-        # レスポンスヘッダーを保存
-        cls._save_to_file('{}/{}'.format(export_path, 'response_headers'),
-                          cls.headers_to_bytes(response.headers))
-
-        # レスポンスボディを保存
-        body_bytes = response.content
-        cls._save_to_file('{}/{}'.format(export_path, 'response_body'), body_bytes)
-
-    @classmethod
-    def _get_data_path(cls, request: http.HTTPRequest, base_path: str):
-        """
-        保存先のパスを生成する
-        :param request:
-        :param base_path:
-        :return:
-        """
-        # file_path = './scouty/tests/data/stub_data/{}/{}/{}'.format(
-        file_path = '{}/{}/{}'.format(
-            base_path,
-            urllib.parse.quote_plus(request.url),
-            request.method
-        )
-        return file_path
-
-    @classmethod
-    def _save_to_file(cls, filename: str, byte_data: bytes):
+    def save_to_file(cls, filename: str, byte_data: bytes):
         """
         引数で渡されたbyteデータをファイルに保存する
         :param filename:
@@ -125,17 +43,100 @@ class ResponseRecorder:
             f.write(byte_data)
 
     @classmethod
-    def _load_from_file(cls, filename: str) -> Optional[bytes]:
+    def load_from_file(cls, filename: str) -> bytes:
         """
         ファイルを読み込む
-        ファイルが存在しない場合はNoneを返却する
         :param filename:
         :return:
         """
-        try:
-            with open(filename, 'rb') as f:
-                byte_data = f.read()
-        except FileNotFoundError:
-            byte_data = None
+        with open(filename, 'rb') as f:
+            return f.read()
 
-        return byte_data
+
+class ResponseRecorder:
+    CALLED_REQUESTS = []
+
+    @classmethod
+    def load_response(cls, request: HttpRequest) -> HttpResponse:
+        """
+        保存されたレスポンスをロードする
+        :param request:
+        :return:
+        """
+        file_path = cls._get_data_path(request)
+        print('==> Response data is loaded from {}'.format(file_path))
+
+        # スタブがロードしようとしたファイルのパスを記録する
+        cls.CALLED_REQUESTS.append(file_path)
+
+        # 該当するスタブのファイルがない場合は例外を発生させる
+        if not os.path.exists(file_path):
+            raise ResponseDataNotFound('There is no such stub data dir. {}'.format(file_path))
+
+        # ファイルをロードして各オブジェクトを復元する
+        metadata = RequestMetaData(**json.loads(
+            FileReaderWriter.load_from_file('{}/{}'.format(file_path, 'metadata')).decode('UTF-8'),
+        ))
+        headers = cls._bytes_to_headers(FileReaderWriter.load_from_file('{}/{}'.format(file_path, 'response_header')))
+        body = FileReaderWriter.load_from_file('{}/{}'.format(file_path, 'response_body'))
+
+        # Response オブジェクトを作成する
+        return HttpResponse(
+            status=metadata.status,
+            headers=headers,
+            body=body
+        )
+
+    @classmethod
+    def save_response(cls, request: HttpRequest, response: HttpResponse):
+        """
+        HTTPレスポンスをファイルに保存する
+        :param request:
+        :param response:
+        :return:
+        """
+        export_path = cls._get_data_path(request)
+        print('==> Response data is saved into {}'.format(export_path))
+
+        # 出力先のディレクトリがなければ作成する
+        if not os.path.exists(export_path):
+            os.makedirs(export_path)
+
+        # メタデータを保存
+        metadata = RequestMetaData(
+            url=request.url,
+            method=request.method,
+            status=response.status,
+        )
+        FileReaderWriter.save_to_file('{}/{}'.format(export_path, 'metadata'),
+                                      json.dumps(asdict(metadata), indent=4).encode('UTF-8'))
+
+        # レスポンスヘッダーを保存
+        FileReaderWriter.save_to_file('{}/{}'.format(export_path, 'response_header'),
+                                      cls._headers_to_bytes(response.headers))
+
+        # レスポンスボディを保存
+        body_bytes = response.body
+        FileReaderWriter.save_to_file('{}/{}'.format(export_path, 'response_body'), body_bytes)
+
+    @classmethod
+    def _get_data_path(cls, request: HttpRequest):
+        """ 保存先のパスを生成する """
+        response_data_path = os.getenv('RESPONSE_DATA_PATH', './response_data')
+        file_path = '{}/{}/{}'.format(
+            response_data_path,
+            urllib.parse.quote_plus(request.url),
+            request.method
+        )
+        return file_path
+
+    @classmethod
+    def _headers_to_bytes(cls, headers: Iterable) -> bytes:
+        if headers:
+            return b"\r\n".join(b": ".join(header) for header in headers) + b"\r\n"
+        else:
+            return b""
+
+    @classmethod
+    def _bytes_to_headers(cls, raw_headers: bytes) -> Iterable:
+        return [(l.split(b": ")[0], l.split(b": ")[1]) for l in raw_headers.split(b"\r\n") if l]
