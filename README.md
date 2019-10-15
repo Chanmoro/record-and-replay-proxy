@@ -4,25 +4,30 @@
 
 # 使い方
 
-## docker ビルド
+## Setup
+### docker ビルド
 
 ```bash
 $ docker build -t record-and-replay-proxy .
 ```
-
-## レスポンスの record
-
-```bash
-$ docker run -it --rm -p 8080:8080 record-and-replay-proxy /app/record.sh
-```
-
-## レスポンスの replay
+## Record & Replay
+### レスポンスの record
 
 ```bash
-$ docker run -it --rm -p 8080:8080 record-and-replay-proxy /app/replay.sh
+$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data record-and-replay-proxy /app/record.sh
 ```
 
-## 確認方法
+### レスポンスの replay
+
+```bash
+$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data record-and-replay-proxy /app/replay.sh
+```
+
+### 設定
+レスポンスデータは `/app/response_data` に保存、ロードされます  
+このパスは環境変数 `RESPONSE_DATA_DIR` を設定することで任意のパスに変更できます
+
+### 確認方法
 
 ```bash
 $ curl -k -x localhost:8080 https://www.doorkeeper.jp/
@@ -30,7 +35,7 @@ $ curl -k -x localhost:8080 https://www.doorkeeper.jp/
 
 curl の `-x` オプションでプロキシを設定できます
 
-## テスト実行
+## Test
 
 テストは pytest で書かれています
 
