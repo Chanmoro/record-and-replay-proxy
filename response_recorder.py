@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import urllib.parse
@@ -55,6 +56,28 @@ class FileReaderWriter:
 
 class ResponseRecorder:
     CALLED_REQUESTS = []
+    RESPONSE_DATA_DIR = './response_data'
+
+    @classmethod
+    def initialize(cls, response_data_dir: str):
+        cls.CALLED_REQUESTS = []
+        cls.RESPONSE_DATA_DIR = response_data_dir
+
+    @classmethod
+    def response_data_dir(cls):
+        return cls.RESPONSE_DATA_DIR
+
+    @classmethod
+    def called_responses(cls):
+        return cls.CALLED_REQUESTS
+
+    @classmethod
+    def all_registered_responses(cls):
+        return glob.glob(f'{cls.RESPONSE_DATA_DIR}/*/*')
+
+    @classmethod
+    def not_called_responses(cls):
+        return list(set(cls.all_registered_responses()) - set(cls.called_responses()))
 
     @classmethod
     def load_response(cls, request: HttpRequest) -> HttpResponse:
@@ -122,9 +145,8 @@ class ResponseRecorder:
     @classmethod
     def _get_data_path(cls, request: HttpRequest):
         """ 保存先のパスを生成する """
-        response_data_path = os.getenv('RESPONSE_DATA_PATH', './response_data')
         file_path = '{}/{}/{}'.format(
-            response_data_path,
+            cls.RESPONSE_DATA_DIR,
             urllib.parse.quote_plus(request.url),
             request.method
         )
