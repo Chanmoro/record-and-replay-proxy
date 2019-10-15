@@ -1,7 +1,5 @@
 import threading
-import multiprocessing as mp
 
-from mitmproxy import http
 from flask import Flask, jsonify, request
 
 from response_recorder import ResponseRecorder
