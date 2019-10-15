@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "crawler-proxy"
+name = "record-and-replay-proxy"
 version = "0.1.0"
 description = ""
 authors = ["Chanmoro <kazuki.m777@gmail.com>"]
@@ -7,6 +7,7 @@ authors = ["Chanmoro <kazuki.m777@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.7"
 mitmproxy = "^4.0"
+Flask = "^1.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^3.0"
