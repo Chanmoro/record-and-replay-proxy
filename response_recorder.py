@@ -56,7 +56,7 @@ class FileReaderWriter:
 
 class ResponseRecorder:
     CALLED_REQUESTS = []
-    RESPONSE_DATA_DIR = './response_data'
+    RESPONSE_DATA_DIR = os.getenv('RESPONSE_DATA_DIR', './response_data')
 
     @classmethod
     def initialize(cls, response_data_dir: str):
