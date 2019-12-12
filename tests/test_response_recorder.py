@@ -1,4 +1,3 @@
-import os
 import urllib.parse
 
 from response_recorder import HttpRequest, HttpResponse, ResponseRecorder
