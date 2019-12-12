@@ -2,6 +2,8 @@
 
 Record and replay http request plugin for [mitmproxy](https://mitmproxy.org/).
 
+![image](https://raw.githubusercontent.com/Chanmoro/record-and-replay-proxy/master/docs/record-and-replay-proxy.png)
+
 # How to use
 ## Record
 
