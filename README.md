@@ -6,13 +6,13 @@ Record and replay http request plugin for [mitmproxy](https://mitmproxy.org/).
 ## Record
 
 ```bash
-$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data record-and-replay-proxy record
+$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data chanmoro/record-and-replay-proxy record
 ```
 
 ## Replay
 
 ```bash
-$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data chanmoro:record-and-replay-proxy replay
+$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data chanmoro/record-and-replay-proxy replay
 ```
 
 ## Setting
