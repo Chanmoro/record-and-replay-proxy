@@ -1,43 +1,42 @@
 # record-and-replay-proxy
 
-このプロキシを利用すると API や外部サービスへの HTTP レスポンスの記録と、記録したレスポンスをサービスにアクセスせずプロキシから返すことができます
+Record and replay http request plugin for [mitmproxy](https://mitmproxy.org/).
 
-# 使い方
+# How to use
+## Record
 
-## Setup
-### docker ビルド
+```bash
+$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data record-and-replay-proxy record
+```
+
+## Replay
+
+```bash
+$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data chanmoro:record-and-replay-proxy replay
+```
+
+## Setting
+Recorded http response is saved into `/app/response_data` by default.  
+You can modify save destination dir by setting an environment variable `RESPONSE_DATA_DIR`.
+
+# Example
+## Using with curl
+Specify http proxy with `-x` option.
+
+```bash
+$ curl -k -x localhost:8080 https://github.com/
+```
+
+# Development
+## Docker build
 
 ```bash
 $ docker build -t record-and-replay-proxy .
 ```
-## Record & Replay
-### レスポンスの record
-
-```bash
-$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data record-and-replay-proxy /app/record.sh
-```
-
-### レスポンスの replay
-
-```bash
-$ docker run -it --rm -p 8080:8080 -v ${PWD}/response_data:/app/response_data record-and-replay-proxy /app/replay.sh
-```
-
-### 設定
-レスポンスデータは `/app/response_data` に保存、ロードされます  
-このパスは環境変数 `RESPONSE_DATA_DIR` を設定することで任意のパスに変更できます
-
-### 確認方法
-
-```bash
-$ curl -k -x localhost:8080 https://www.doorkeeper.jp/
-```
-
-curl の `-x` オプションでプロキシを設定できます
 
 ## Test
 
-テストは pytest で書かれています
+Execute test by pytest.
 
 ```bash
 $ pytest
