@@ -15,3 +15,6 @@ WORKDIR /app
 RUN poetry install
 
 ADD . /app
+
+ENV PATH $PATH:/app/bin
+ENV RESPONSE_DATA_DIR /app/response_data
