@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+mitmdump -s ./src/record.py

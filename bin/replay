@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+mitmdump --set upstream_cert=false -s ./src/replay.py
